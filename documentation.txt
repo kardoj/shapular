@@ -1,5 +1,7 @@
 ﻿Shapular prototype
 
+0. Setup
+	"levels" directory has to have write permission to save coordinates.txt.
 1. Rules for level creation
 	All image files must be lowercase .png files.
 	a) Required files
