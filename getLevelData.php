@@ -29,19 +29,10 @@
 		$response->pieces = $pieces;
 		$response->coordinates = null;
 		
-		// If image positions file exists, get its contents
+		// If coordinates file exists, get coordinates
 		if(file_exists($level_resources_path . "/coordinates.txt")){
 			$coordinates = file_get_contents($level_resources_path . "/coordinates.txt");
-			$file_rows = explode("\n", $coordinates);
-			$coordinates_array = array();
-			foreach($file_rows as $row){
-				$row_pieces = explode(" ", $row);
-				$one = new StdClass();
-				$one->image = trim($row_pieces[0]);
-				$one->x = trim($row_pieces[1]);
-				$one->y = trim($row_pieces[2]);
-				array_push($coordinates_array, $one);
-			}
+			$coordinates_array = json_decode($coordinates);
 			$response->coordinates = $coordinates_array;
 		}
 		

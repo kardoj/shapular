@@ -12,6 +12,7 @@
 			x: 0,
 			y: 0
 		};
+		var levelData = null;
 		$(document).ready(function(){
 			$("#levels").on("change", function(){
 				var selected = $("#levels option:selected").text();
@@ -24,13 +25,14 @@
 						url: "getLevelData.php",
 						data: {level: selected}
 					}).done(function(data){
-						loadLevel(JSON.parse(data));
+						levelData = JSON.parse(data);
+						loadLevel();
 					});	
 				}
 			});
 		});
 		
-		function loadLevel(levelData){
+		function loadLevel(){
 			$("<div id='border'><img src='"+levelData.border.image+"' alt='game border image'></div>").appendTo("#content");
 			$("#border").css("margin", "auto");
 			$("#border").css("left", "0");
@@ -40,27 +42,57 @@
 			$("#border").css("width", levelData.border.width);
 			$("#border").css("height", levelData.border.height);
 			
-			var borderPosition = $("#border").offset();
-			var borderX = borderPosition.left;
-			var borderY = borderPosition.top;
+			var borderCoordinates = getBorderCoordinates();
 			if(levelData.coordinates === null){
 				// Randomly distribute pieces
 				var containerWidth = $("#content").width();
 				var containerHeight = $("#content").height();
+				var pieceCoordinates = [];
 				for(var i=0; i<levelData.pieces.length; i++){
 					var x = Math.ceil(Math.random()*(containerWidth-levelData.pieces[i].width));
 					var y = Math.ceil(Math.random()*(containerHeight-levelData.pieces[i].height));
-					console.log(containerWidth);
 					createPiece(i, levelData.pieces[i].image, x, y);
-				}				
+					var relativeCoordinates = getPieceRelativeCoordinates("#piece" + (i+1));
+					var coordinates = {
+						filename: levelData.pieces[i].image.split("/")[2],
+						x: relativeCoordinates.x,
+						y: relativeCoordinates.y
+					};
+					pieceCoordinates.push(coordinates);
+				}
+				// Add coordinates to levelData.coordinates
+				levelData.coordinates = pieceCoordinates;
+				// Write all the coordinates to coordinates.txt in JSON
+				updateCoordinatesFile();
 			} else {
 				// Set pieces to their coordinates
 				for(var i=0; i<levelData.pieces.length; i++){
-					var x = parseInt(borderX) + parseInt(levelData.coordinates[i].x);
-					var y = parseInt(borderY) + parseInt(levelData.coordinates[i].y);					
+					var x = parseInt(borderCoordinates.x) + parseInt(levelData.coordinates[i].x);
+					var y = parseInt(borderCoordinates.y) + parseInt(levelData.coordinates[i].y);					
 					createPiece(i, levelData.pieces[i].image, x, y);
 				}
 			}
+		}
+		
+		// Update all the coordinates from levelData.coordinates
+		function updateCoordinatesFile(){
+			var selected = $("#levels option:selected").text();
+			$.ajax({
+				url: "saveLevelCoordinates.php",
+				data: {
+					level: selected,
+					coordinates: JSON.stringify(levelData.coordinates)
+					}
+			});			
+		}
+		
+		function getBorderCoordinates(){
+			var borderOffset = $("#border").offset();
+			var borderCoordinates = {
+				x: borderOffset.left,
+				y: borderOffset.top
+			};
+			return borderCoordinates;
 		}
 		
 		// Counter is from the loop and is used to make ids for the pieces (piece1, piece2, etc)
@@ -88,6 +120,36 @@
 					$(draggedPiece).css("top", y);
 				}
 			});
+			
+			$(hash_id).on("dragend", function(){
+				var imgSrc = $(draggedPiece).children("img").attr("src");
+				var filename = imgSrc.split("/")[2];
+				var relativeCoordinates = getPieceRelativeCoordinates(draggedPiece);
+				savePieceCoordinates(filename, relativeCoordinates.x, relativeCoordinates.y);
+			});
+		}
+		
+		// All piece coordinates are saved relative to the border coordinates to allow different screen sizes
+		function getPieceRelativeCoordinates(pieceId){
+			var piecePosition = $(pieceId).position();
+			var borderPosition = getBorderCoordinates();
+			var relativeCoordinates = {
+				x: piecePosition.left - borderPosition.x,
+				y: piecePosition.top - borderPosition.y
+			};
+			return relativeCoordinates;
+		}
+		
+		function savePieceCoordinates(filename, x, y){
+			// Update coordinates in levelData.coordinates and write JSON into the coordinates.txt file
+			for(var i=0; i<levelData.coordinates.length; i++){
+				if(levelData.coordinates[i].filename == filename){
+					levelData.coordinates[i].x = x;
+					levelData.coordinates[i].y = y;
+				}
+			}
+			
+			updateCoordinatesFile(levelData.coordinates);
 		}
 	</script>
 </head>

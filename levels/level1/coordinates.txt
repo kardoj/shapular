@@ -1,8 +1,1 @@
-1.png 5 6
-2.png 4 5
-3.png 11 100
-4.png 23 35
-5.png 40 40
-6.png 25 11
-7.png 10 10
-8.png 30 30
+[{"filename":"1.png","x":45,"y":11.375},{"filename":"2.png","x":81,"y":132.375},{"filename":"3.png","x":87,"y":122.375},{"filename":"4.png","x":43,"y":112.375},{"filename":"5.png","x":165,"y":176.375},{"filename":"6.png","x":161,"y":57.375},{"filename":"7.png","x":246,"y":65.375},{"filename":"8.png","x":121,"y":9.375}]

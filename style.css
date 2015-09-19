@@ -7,3 +7,6 @@
 .piece, #border{
 	position: absolute;
 }
+.piece:hover{
+	cursor: pointer;
+}
