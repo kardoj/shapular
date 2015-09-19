@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<title>Tasemete ülesseadmine</title>
+	<title>Shapular</title>
 	<script src="jquery-2.1.4.min.js"></script>
 	<script src="draggabilly.pkgd.min.js"></script>
 	<link rel="stylesheet" href="style.css">
@@ -15,7 +15,14 @@
 		};
 		var levelData = null;
 		var selectedLevel = null;
+		// Allowed misplacement in all four directions
+		var allowedError = 10;
 		$(document).ready(function(){
+			
+			// Trigger level change when clicking reset
+			$("#resetBtn").on("click", function(){
+				$("#levels").trigger("change");
+			});
 			$("#levels").on("change", function(){
 				selectedLevel = $("#levels option:selected").text();
 				$("#content").empty();
@@ -33,7 +40,7 @@
 		});
 		
 		function loadLevel(){
-			$("<div id='border'><img src='"+levelData.border.image+"' alt='game border image'></div>").appendTo("#content");
+			$("<div draggable='true' id='border'><img src='"+levelData.border.image+"' alt='game border image'></div>").appendTo("#content");
 			$("#border").css("margin", "auto");
 			$("#border").css("left", "0");
 			$("#border").css("right", "0");
@@ -43,46 +50,14 @@
 			$("#border").css("height", levelData.border.height);
 			
 			var borderCoordinates = getBorderCoordinates();
-			if(levelData.coordinates === null){
-				// Randomly distribute pieces
-				var containerWidth = $("#content").width();
-				var containerHeight = $("#content").height();
-				var pieceCoordinates = [];
-				for(var i=0; i<levelData.pieces.length; i++){
-					var x = Math.ceil(Math.random()*(containerWidth-levelData.pieces[i].width));
-					var y = Math.ceil(Math.random()*(containerHeight-levelData.pieces[i].height));
-					createPiece(i, levelData.pieces[i].image, x, y);
-					var relativeCoordinates = getPieceRelativeCoordinates("#piece" + (i+1));
-					var coordinates = {
-						filename: levelData.pieces[i].image.split("/")[2],
-						x: relativeCoordinates.x,
-						y: relativeCoordinates.y
-					};
-					pieceCoordinates.push(coordinates);
-				}
-				// Add coordinates to levelData.coordinates
-				levelData.coordinates = pieceCoordinates;
-				// Write all the coordinates to coordinates.txt in JSON
-				updateCoordinatesFile();
-			} else {
-				// Set pieces to their coordinates
-				for(var i=0; i<levelData.pieces.length; i++){
-					var x = parseInt(borderCoordinates.x) + parseInt(levelData.coordinates[i].x);
-					var y = parseInt(borderCoordinates.y) + parseInt(levelData.coordinates[i].y);					
-					createPiece(i, levelData.pieces[i].image, x, y);
-				}
+			// Randomly distribute pieces
+			var containerWidth = $("#content").width();
+			var containerHeight = $("#content").height();
+			for(var i=0; i<levelData.pieces.length; i++){
+				var x = Math.ceil(Math.random()*(containerWidth-levelData.pieces[i].width));
+				var y = Math.ceil(Math.random()*(containerHeight-levelData.pieces[i].height));
+				createPiece(i, levelData.pieces[i].image, x, y);
 			}
-		}
-		
-		// Update all the coordinates from levelData.coordinates
-		function updateCoordinatesFile(){
-			$.ajax({
-				url: "saveLevelCoordinates.php",
-				data: {
-					level: selectedLevel,
-					coordinates: JSON.stringify(levelData.coordinates)
-					}
-			});			
 		}
 		
 		function getBorderCoordinates(){
@@ -102,7 +77,7 @@
 			$(hash_id).css("left", x);
 			$(hash_id).css("top", y);
 			
-			$(hash_id).draggabilly({}).on("dragStart", function(){
+			$(hash_id).draggabilly({}).on("dragStart", function(event){
 				draggedPiece = "#" + $(this).attr("id");
 				var piecePosition = $(draggedPiece).position();
 				mouseToDragged = {
@@ -111,7 +86,7 @@
 				};
 			});
 			
-			$(hash_id).draggabilly({}).on("dragMove", function(){
+			$(hash_id).draggabilly({}).on("dragMove", function(event){
 				if(event.pageX != 0){ // For some reason, last drag event gives 0 for event.pageX
 					var x = event.pageX - mouseToDragged.x;
 					var y = event.pageY - mouseToDragged.y;
@@ -120,12 +95,35 @@
 				}
 			});
 			
-			$(hash_id).draggabilly({}).on("dragEnd", function(){
-				var imgSrc = $(draggedPiece).children("img").attr("src");
-				var filename = imgSrc.split("/")[2];
-				var relativeCoordinates = getPieceRelativeCoordinates(draggedPiece);
-				savePieceCoordinates(filename, relativeCoordinates.x, relativeCoordinates.y);
+			$(hash_id).draggabilly({}).on("dragEnd", function(event){
+				// CHECK IF ALL THE COORDINATES MATCH
+				var pieces = $("#content").children("div");
+				var win = true;
+				for(var i=1; i<pieces.length; i++){
+					var hash_id = "#" + $(pieces[i]).attr("id");
+					var relativePieceCoordinates = getPieceRelativeCoordinates(hash_id);
+					var filename = $(hash_id).children("img").attr("src").split("/")[2];
+					if(!(coordinatesMatch(levelData.coordinates[i-1], relativePieceCoordinates))){
+						win = false;
+						break;
+					}
+				}
+				// If all coordinates matched, player wins!
+				if(win){
+					alert("Sinu võit!");
+					// Remove all the piece listeners so pieces can not be moved until choosing another level
+					$(".piece").draggabilly("disable");
+				}
 			});
+		}
+		
+		// A function for defining and checking allowed coordinate error
+		function coordinatesMatch(levelDataCoordinates, pieceCoordinates){
+			if(levelDataCoordinates.x >= pieceCoordinates.x - allowedError && levelDataCoordinates.x <= allowedError + pieceCoordinates.x &&
+				levelDataCoordinates.y >= pieceCoordinates.y - allowedError && levelDataCoordinates.y <= allowedError + pieceCoordinates.y){
+				return true;
+			}
+			return false;
 		}
 		
 		// All piece coordinates are saved relative to the border coordinates to allow different screen sizes
@@ -138,18 +136,6 @@
 			};
 			return relativeCoordinates;
 		}
-		
-		function savePieceCoordinates(filename, x, y){
-			// Update coordinates in levelData.coordinates and write JSON into the coordinates.txt file
-			for(var i=0; i<levelData.coordinates.length; i++){
-				if(levelData.coordinates[i].filename == filename){
-					levelData.coordinates[i].x = x;
-					levelData.coordinates[i].y = y;
-				}
-			}
-			
-			updateCoordinatesFile(levelData.coordinates);
-		}
 	</script>
 </head>
 <body>
@@ -160,12 +146,20 @@
 		<option value="none" selected="selected">Vali tase</option>
 		<?php 
 			foreach($levels as $level){
-				if($level != "." && $level != ".."){
+				$level_files = scandir("levels/" . $level);
+				$coordinates_available = false;
+				foreach($level_files as $file){
+					if($file == "coordinates.txt"){
+						$coordinates_available = true;
+					}
+				}
+				if($coordinates_available){
 					echo "<option value='$level'>$level</option>";
 				}
 			}
 		?>
 	</select>
+	<input type="button" value="Reset" id="resetBtn">
 	
 	<div id="content">
 	</div>
