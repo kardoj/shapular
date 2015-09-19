@@ -102,7 +102,7 @@
 			$(hash_id).css("left", x);
 			$(hash_id).css("top", y);
 			
-			$(hash_id).draggabilly({}).on("dragStart", function(){
+			$(hash_id).draggabilly({}).on("dragStart", function(event){
 				draggedPiece = "#" + $(this).attr("id");
 				var piecePosition = $(draggedPiece).position();
 				mouseToDragged = {
@@ -111,7 +111,7 @@
 				};
 			});
 			
-			$(hash_id).draggabilly({}).on("dragMove", function(){
+			$(hash_id).draggabilly({}).on("dragMove", function(event){
 				if(event.pageX != 0){ // For some reason, last drag event gives 0 for event.pageX
 					var x = event.pageX - mouseToDragged.x;
 					var y = event.pageY - mouseToDragged.y;
@@ -120,7 +120,7 @@
 				}
 			});
 			
-			$(hash_id).draggabilly({}).on("dragEnd", function(){
+			$(hash_id).draggabilly({}).on("dragEnd", function(event){
 				var imgSrc = $(draggedPiece).children("img").attr("src");
 				var filename = imgSrc.split("/")[2];
 				var relativeCoordinates = getPieceRelativeCoordinates(draggedPiece);
