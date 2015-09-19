@@ -1,0 +1,10 @@
+﻿Shapular prototype
+
+1. Rules for level creation
+	All image files must be lowercase .png files.
+	a) Required files
+		1) A folder with the level name in "levels" directory
+		2) A file "border.png" in the level directory
+		3) Pieces (shapes) image files named "1.png"; "2.png"; "3.png"; ...
+	b) Resource coordinates
+		All coordinates are relative to "border.png's" positioning on the page.
